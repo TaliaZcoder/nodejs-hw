@@ -1,8 +1,13 @@
 import express from 'express';
 import cors from "cors";
 import dotenv from "dotenv";
+import helmet from "helmet";
 import pino from "pino-http";
 import { connectMongoDB } from './db/connectMongoDB.js';
+import { errorHandler } from "./middleware/errorHandler.js";
+import { notFoundHandler } from "./middleware/notFoundHandler.js";
+import { logger } from "./middleware/logger.js";
+import notesRoutes from "./routes/notesRoutes.js";
 
 dotenv.config();
 
@@ -11,9 +16,18 @@ const PORT = process.env.PORT || 3000;
 
 // middleware
 
-app.use(cors());
+app.use(cors({
+    methods: ["GET", "POST", "PATCH", "DELETE"],
+    origin: "*",
+  }));
 app.use(express.json());
+app.use(helmet());
 app.use(pino());
+
+app.use(notesRoutes);
+
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 // test route
 
@@ -37,24 +51,6 @@ app.get("/notes/:noteId", (req, res) => {
 
 app.get('/test-error', () => {
   throw new Error('Simulated server error');
-});
-
-// 404 MIDDLEWARE
-
-app.use((req, res) => {
-  res.status(404).json({
-    message: "Route not found",
-  });
-});
-
-// 500 ERROR HANDLER
-
-app.use((err, req, res, next) => {
-  console.error(err);
-
-  res.status(500).json({
-    message: err.message,
-  });
 });
 
 // підключення до MongoDB
