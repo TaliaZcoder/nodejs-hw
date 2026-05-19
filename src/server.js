@@ -2,6 +2,8 @@ import express from 'express';
 import cors from "cors";
 import dotenv from "dotenv";
 import helmet from "helmet";
+import { errors } from 'celebrate';
+
 
 import { connectMongoDB } from './db/connectMongoDB.js';
 import { errorHandler } from "./middleware/errorHandler.js";
@@ -13,8 +15,6 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-// middleware
 
 app.use(cors({
     methods: ["GET", "POST", "PATCH", "DELETE"],
@@ -35,13 +35,10 @@ app.get('/test-error', () => {
 });
 
 app.use(notFoundHandler);
+app.use(errors());
 app.use(errorHandler);
 
-// підключення до MongoDB
-
 await connectMongoDB();
-
-// START SERVER
 
 app.listen(PORT, () => {
     console.log(`Server is running on localhost: ${PORT}`);
