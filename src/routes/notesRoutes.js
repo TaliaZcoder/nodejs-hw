@@ -20,7 +20,7 @@ import { authenticate } from "../middleware/authenticate.js";
 
 const router = Router();
 
-router.use("/students", authenticate);
+router.use("/notes", authenticate, getAllNotes);
 
 router.get('/notes', celebrate(getAllNotesSchema), getAllNotes);
 router.get('/notes/:noteId', celebrate(noteIdSchema), getNoteById);
