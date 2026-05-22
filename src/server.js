@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import helmet from "helmet";
 import { errors } from 'celebrate';
+import cookieParser from 'cookie-parser';
 
 
 import { connectMongoDB } from './db/connectMongoDB.js';
@@ -23,6 +24,8 @@ app.use(cors({
 app.use(express.json());
 app.use(helmet());
 app.use(logger);
+
+app.use(cookieParser());
 
 app.use(notesRoutes);
 
