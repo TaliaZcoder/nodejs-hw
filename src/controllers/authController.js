@@ -6,6 +6,9 @@ import { createSession, setSessionCookies } from "../services/auth.js";
 import { Session } from "../models/session.js";
 import { sendMail } from "../utils/sendMail.js";
 
+import fs from "node:fs/promises";
+import handlebars from "handlebars";
+
 
 export const registerUser = async (req, res) => {
   const existingUser = await User.findOne({ email: req.body.email });
@@ -110,14 +113,26 @@ export const requestResetEmail = async (req, res) => {
   );
 
  const resetLink =
-  `${process.env.FRONTEND_DOMAIN}/reset-password?token=${resetToken}`;
+    `${process.env.FRONTEND_DOMAIN}/reset-password?token=${resetToken}`;
+  
+  const source = await fs.readFile(
+  "./src/templates/reset-password-email.html",
+  "utf-8",
+);
+
+    const template = handlebars.compile(source);
+
+    const html = template({
+    name: user.username,
+    link: resetLink,
+    });
 
   try {
     await sendMail({
       from: process.env.SMTP_FROM,
       to: req.body.email,
       subject: "Password reset",
-      html: `<p>Click <a href="${resetLink}">here</a> to reset your password!!!</p>`,
+      html,
     });
   } catch (error) {
     console.log(error);
