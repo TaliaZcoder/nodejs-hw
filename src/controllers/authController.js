@@ -1,5 +1,6 @@
 import createHttpError from "http-errors";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 import { User } from "../models/user.js";
 import { createSession, setSessionCookies } from "../services/auth.js";
 import { Session } from "../models/session.js";
@@ -28,7 +29,7 @@ export const registerUser = async (req, res) => {
 export const loginUser = async (req, res) => {
   const user = await User.findOne({ email: req.body.email });
   if (!user) {
-    throw createHttpError(401, "Invalid creds");
+    throw createHttpError(401, "Invalid credentials");
   }
 
   const isValidPassword = await bcrypt.compare(
@@ -36,7 +37,7 @@ export const loginUser = async (req, res) => {
     user.password,
   );
   if (!isValidPassword) {
-    throw createHttpError(401, "Invalid creds");
+    throw createHttpError(401, "Invalid credentials");
   }
 
   await Session.deleteOne({ userId: user._id });
@@ -97,30 +98,38 @@ export const refreshUserSession = async (req, res) => {
 export const requestResetEmail = async (req, res) => {
   const user = await User.findOne({ email: req.body.email });
   if (!user) {
-    return res.status(200).json({ message: "Email sent, check inbox!" });
+    return res.status(200).json({
+      message: "Password reset email sent successfully",
+    });
   }
 
   const resetToken = jwt.sign(
     { email: user.email, sub: user._id },
     process.env.JWT_SECRET,
-    { expiresIn: "10m" },
+    { expiresIn: "15m" },
   );
 
-  const frontEndUrl = `${process.env.FRONTEND_URL}?token=${resetToken}`;
+ const resetLink =
+  `${process.env.FRONTEND_DOMAIN}/reset-password?token=${resetToken}`;
 
   try {
     await sendEmail({
       from: process.env.SMTP_FROM,
       to: req.body.email,
       subject: "Password reset",
-      html: `<p>Click <a href="${frontEndUrl}">here</a> to reset your password!!!</p>`,
+      html: `<p>Click <a href="${resetLink}">here</a> to reset your password!!!</p>`,
     });
   } catch (error) {
     console.log(error);
-    throw createHttpError(500, error);
+    throw createHttpError(
+      500,
+    'Failed to send the email, please try again later.'
+    );
   }
 
-  res.status(200).json({ message: "Email sent" });
+    res.status(200).json({
+    message: "Password reset email sent successfully",
+  });
 };
 
 export const resetPassword = async (req, res) => {
@@ -128,7 +137,7 @@ export const resetPassword = async (req, res) => {
   try {
     payload = jwt.verify(req.body.token, process.env.JWT_SECRET);
   } catch {
-    throw createHttpError(401, "Bad token");
+    throw createHttpError(401, "Invalid or expired token");
   }
 
   const user = await User.findOne({
@@ -136,7 +145,7 @@ export const resetPassword = async (req, res) => {
     email: payload.email,
   });
   if (!user) {
-    throw createHttpError(404, "No user");
+    throw createHttpError(404, "User not found");
   }
 
   const hashedPassword = await bcrypt.hash(req.body.password, 10);
@@ -145,6 +154,6 @@ export const resetPassword = async (req, res) => {
   await Session.deleteMany({ userId: user._id });
 
   res.status(200).json({
-    message: "Success",
+    message: "Password reset successfully",
   });
 };
